@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Midtrans\Config;
 use Midtrans\Notification;
+use Midtrans\Transaction;
 
 class PaymentController extends Controller
 {
@@ -69,6 +70,7 @@ class PaymentController extends Controller
 
     /**
      * For Frontend: Check payment status and get receipt (struk)
+     * Also syncs status from Midtrans API if still pending.
      */
     public function checkStatus($uuid)
     {
@@ -77,6 +79,36 @@ class PaymentController extends Controller
 
         if (!$payment) {
             return response()->json(['message' => 'Not found'], 404);
+        }
+
+        // If still pending, check directly from Midtrans API
+        if ($payment->status === 'pending') {
+            try {
+                $midtransStatus = Transaction::status($payment->midtrans_order_id);
+                $status = $midtransStatus->transaction_status ?? null;
+
+                if ($status === 'settlement' || $status === 'capture') {
+                    DB::transaction(function () use ($payment, $midtransStatus) {
+                        $payment->update([
+                            'status' => 'settlement',
+                            'payment_method' => $midtransStatus->payment_type ?? null,
+                            'midtrans_transaction_id' => $midtransStatus->transaction_id ?? null,
+                            'paid_at' => now(),
+                        ]);
+
+                        $this->activateSubscription($payment);
+                    });
+
+                    // Reload updated data
+                    $payment->refresh();
+                    $payment->load(['user', 'plan', 'subscription']);
+                } elseif (in_array($status, ['cancel', 'deny', 'expire'])) {
+                    $payment->update(['status' => 'failed']);
+                    $payment->refresh();
+                }
+            } catch (\Exception $e) {
+                // Midtrans API unreachable, just return current DB status
+            }
         }
 
         return response()->json([

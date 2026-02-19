@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/payment/callback',
         ]);
-        $middleware->api(append: [
+        $middleware->api(prepend: [
             \App\Http\Middleware\ForceJsonResponse::class,
         ]);
     })

@@ -163,10 +163,16 @@ class SubscriptionController extends Controller
         try {
             $snapToken = Snap::getSnapToken($params);
             
+            $midtransBaseUrl = config('midtrans.is_production') 
+                ? 'https://app.midtrans.com/snap/v2/vtweb/' 
+                : 'https://app.sandbox.midtrans.com/snap/v2/vtweb/';
+
             return response()->json([
                 'message' => 'Payment generated. Please complete payment.',
                 'data' => [
                     'snap_token' => $snapToken,
+                    'redirect_url' => $midtransBaseUrl . $snapToken,
+                    'payment_uuid' => $payment->uuid,
                     'order_id' => $orderId,
                     'amount' => $totalPrice,
                     'plan_name' => $plan->name,
