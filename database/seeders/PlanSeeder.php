@@ -53,7 +53,10 @@ class PlanSeeder extends Seeder
         ];
 
         foreach ($plans as $plan) {
-            Plan::create($plan);
+            Plan::firstOrCreate(
+                ['name' => $plan['name']], // Cek berdasarkan nama, jika sudah ada → skip
+                $plan
+            );
         }
     }
 }
