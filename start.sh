@@ -15,10 +15,8 @@ php artisan view:cache
 echo "Running database migrations..."
 php artisan migrate --force
 
-# Seed data awal (plans, dll) jika tabel masih kosong
-# Bersihkan data plans duplikat lalu seed ulang
-echo "Cleaning and seeding plans..."
-php artisan tinker --execute="DB::table('plans')->truncate();"
+# Seed data awal (plans, dll) jika belum ada
+echo "Seeding database..."
 php artisan db:seed --class=PlanSeeder --force
 
 # Mulai web server apache di foreground
