@@ -22,10 +22,12 @@ return [
     'allowed_origins' => [
         'http://localhost:5173',
         'http://localhost:3000',
-        env('FRONTEND_URL', 'https://pergudangan-novatix.vercel.app'), // Tambahkan URL Vercel sesungguhnya jika berbeda
+        'https://gymplatform-novatixid.vercel.app',
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://.*\.vercel\.app$#',
+    ],
 
     'allowed_headers' => ['*'],
 
