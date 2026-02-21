@@ -40,11 +40,11 @@ RUN composer install --no-dev --optimize-autoloader
 # Atur permission agar folder storage dan cache bisa ditulis oleh web server
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+# Atur permission executable ke file script start-up
+RUN chmod +x /var/www/html/start.sh
+
 # Expose port 80
 EXPOSE 80
 
-# Command yang dijalankan saat container start: 
-# 1. Jalankan migrasi database
-# 2. Cache config & route
-# 3. Jalankan Apache di foreground
-CMD php artisan migrate --force && php artisan config:cache && php artisan route:cache && php artisan view:cache && apache2-foreground
+# Command yang dijalankan saat container start diarahkan ke script bash
+CMD ["/var/www/html/start.sh"]
