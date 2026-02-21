@@ -10,11 +10,12 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ekstensi PHP (termasuk PDO MySQL untuk koneksi database)
+# Install ekstensi PHP (termasuk PDO MySQL & PostgreSQL untuk koneksi database)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
+    && docker-php-ext-install gd pdo pdo_mysql pdo_pgsql
 
 # Aktifkan mod_rewrite Apache (wajib untuk routing Laravel)
 RUN a2enmod rewrite
