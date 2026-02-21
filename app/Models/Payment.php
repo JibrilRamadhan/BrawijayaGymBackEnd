@@ -16,7 +16,13 @@ class Payment extends Model
         'midtrans_order_id',
         'midtrans_transaction_id',
         'status',
+        'metadata',
         'paid_at',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
+        'paid_at' => 'datetime',
     ];
 
     public function user()

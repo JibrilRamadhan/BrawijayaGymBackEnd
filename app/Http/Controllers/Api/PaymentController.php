@@ -32,7 +32,7 @@ class PaymentController extends Controller
     {
         try {
             $notification = new Notification();
-            
+
             $status = $notification->transaction_status;
             $orderId = $notification->order_id;
             $paymentType = $notification->payment_type;
@@ -111,17 +111,32 @@ class PaymentController extends Controller
             }
         }
 
+        // Build receipt data
+        $receipt = [
+            'order_id' => $payment->midtrans_order_id,
+            'amount' => $payment->amount,
+            'plan_name' => $payment->plan->name ?? null,
+            'plan_type' => $payment->plan->type ?? null,
+            'user' => $payment->user->username ?? null,
+            'email' => $payment->user->email ?? null,
+            'paid_at' => $payment->paid_at,
+            'status' => $payment->status,
+            'method' => $payment->payment_method,
+        ];
+
+        // Add subscription details if available
+        if ($payment->subscription) {
+            $receipt['subscription'] = [
+                'uuid' => $payment->subscription->uuid,
+                'start_date' => $payment->subscription->start_date,
+                'end_date' => $payment->subscription->end_date,
+                'status' => $payment->subscription->status,
+            ];
+        }
+
         return response()->json([
             'status' => $payment->status,
-            'receipt' => [
-                'order_id' => $payment->midtrans_order_id,
-                'amount' => $payment->amount,
-                'plan' => $payment->plan->name,
-                'user' => $payment->user->username,
-                'paid_at' => $payment->paid_at,
-                'status' => $payment->status,
-                'method' => $payment->payment_method
-            ]
+            'receipt' => $receipt,
         ]);
     }
 
@@ -129,6 +144,7 @@ class PaymentController extends Controller
     {
         $plan = $payment->plan;
         $user = $payment->user;
+        $metadata = $payment->metadata ?? [];
 
         // Calculate End Date
         $startDate = now();
@@ -145,21 +161,23 @@ class PaymentController extends Controller
 
         $payment->update(['subscription_id' => $subscription->id]);
 
-        // Logic for profiles
-        $nonMember = NonMemberProfile::where('user_id', $user->id)->first();
-        $name = $nonMember ? $nonMember->name : $user->username;
+        // Use metadata for profile data (populated during join)
+        $name = $metadata['name'] ?? $user->username;
+        $phone = $metadata['phone'] ?? '000';
 
         if (Str::lower($plan->type) === 'member') {
             // Become non-guest
             $user->update(['is_guest' => false]);
-            
-            // Save to MemberProfile
+
+            // Save to MemberProfile using real data from metadata
             MemberProfile::updateOrCreate(
                 ['user_id' => $user->id],
                 [
                     'uuid' => (string) Str::uuid(),
-                    'first_name' => $name, 
-                    'jenis_klamin' => 'L', // Placeholder
+                    'first_name' => $metadata['first_name'] ?? $name,
+                    'last_name' => $metadata['last_name'] ?? null,
+                    'middle_name' => $metadata['middle_name'] ?? null,
+                    'jenis_klamin' => $metadata['jenis_kelamin'] ?? 'L',
                 ]
             );
         } else {
@@ -169,7 +187,7 @@ class PaymentController extends Controller
                 [
                     'uuid' => (string) Str::uuid(),
                     'name' => $name,
-                    'phone' => $nonMember ? $nonMember->phone : '000',
+                    'phone' => $phone,
                 ]
             );
         }
@@ -178,23 +196,24 @@ class PaymentController extends Controller
     private function calculateEndDate($start, $plan, $payment)
     {
         $start = Carbon::parse($start);
-        
-        // Check if harian and we have custom days? 
-        // We'd need to store custom days in Payment table, let's check migration.
-        // I'll assume we can infer from price if it's harian.
-        // Better yet, I'll use the duration from plan if not harian.
-        
+        $metadata = $payment->metadata ?? [];
+
         if (Str::lower($plan->type) === 'harian') {
-            $days = $payment->amount / $plan->price; 
-            return $start->addDays((int)$days);
+            // Use custom_days from metadata, or fallback to price calculation
+            $days = $metadata['custom_days'] ?? ($payment->amount / max($plan->price, 1));
+            return $start->addDays((int) $days);
         }
 
         $value = $plan->duration_value;
         switch (Str::lower($plan->duration_unit)) {
-            case 'days': return $start->addDays($value);
-            case 'months': return $start->addMonths($value);
-            case 'years': return $start->addYears($value);
-            default: return $start->addDays($value);
+            case 'days':
+                return $start->addDays($value);
+            case 'months':
+                return $start->addMonths($value);
+            case 'years':
+                return $start->addYears($value);
+            default:
+                return $start->addDays($value);
         }
     }
 }

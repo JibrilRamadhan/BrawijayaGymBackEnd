@@ -78,18 +78,42 @@ class AuthController extends Controller
     }
 
     /**
-     * Get authenticated user profile.
+     * Get authenticated user profile with active subscription.
      */
     public function me(Request $request)
     {
-        return response()->json([
-            'data' => [
-                'uuid' => $request->user()->uuid,
-                'username' => $request->user()->username,
-                'email' => $request->user()->email,
-                'is_guest' => $request->user()->is_guest,
-            ]
-        ]);
+        $user = $request->user();
+
+        // Always refresh is_guest from DB to get the latest value
+        $user->refresh();
+
+        // Get active subscription with plan details
+        $activeSubscription = $user->subscriptions()
+            ->with('plan')
+            ->where('status', 'active')
+            ->where('end_date', '>', now())
+            ->orderBy('end_date', 'desc')
+            ->first();
+
+        $data = [
+            'uuid' => $user->uuid,
+            'username' => $user->username,
+            'email' => $user->email,
+            'is_guest' => $user->is_guest,
+        ];
+
+        if ($activeSubscription) {
+            $data['subscription'] = [
+                'uuid' => $activeSubscription->uuid,
+                'plan_name' => $activeSubscription->plan->name,
+                'plan_type' => $activeSubscription->plan->type,
+                'start_date' => $activeSubscription->start_date,
+                'end_date' => $activeSubscription->end_date,
+                'status' => $activeSubscription->status,
+            ];
+        }
+
+        return response()->json(['data' => $data]);
     }
 
     /**
