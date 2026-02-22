@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\PaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -14,5 +16,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/subscriptions/join', [SubscriptionController::class, 'join']);
-    Route::get('/payment/status/{uuid}', [\App\Http\Controllers\Api\PaymentController::class, 'checkStatus']);
+    Route::get('/payment/status/{uuid}', [PaymentController::class, 'checkStatus']);
+
+    // Admin Routes
+    Route::middleware(\App\Http\Middleware\CheckAdmin::class)->prefix('admin')->group(function () {
+        Route::get('/stats', [AdminController::class, 'getStats']);
+        Route::get('/users', [AdminController::class, 'getUsers']);
+        Route::get('/payments', [AdminController::class, 'getPayments']);
+    });
 });

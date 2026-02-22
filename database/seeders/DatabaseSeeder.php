@@ -3,8 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,10 +22,28 @@ class DatabaseSeeder extends Seeder
             PlanSeeder::class,
         ]);
 
-        User::factory()->create([
+        // Create Admin Role
+        $adminRole = Role::firstOrCreate([
+            'name' => 'admin'
+        ], [
+            'uuid' => (string) Str::uuid()
+        ]);
+
+        // Create Admin User
+        $adminUser = User::firstOrCreate([
+            'email' => 'admin@gym.com'
+        ], [
+            'uuid' => (string) Str::uuid(),
+            'name' => 'Administrator',
             'username' => 'admin',
-            'email' => 'admin@gym.com',
+            'phone' => '0000',
+            'password' => Hash::make('password123'),
             'is_guest' => false,
         ]);
+
+        // Attach Role
+        if (!$adminUser->roles()->where('name', 'admin')->exists()) {
+            $adminUser->roles()->attach($adminRole->id);
+        }
     }
 }
