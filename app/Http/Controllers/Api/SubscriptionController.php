@@ -185,8 +185,8 @@ class SubscriptionController extends Controller
             ],
             'customer_details' => [
                 'first_name' => $request->name,
-                'email' => $user->email,
-                'phone' => $request->phone,
+                'email' => filter_var(trim($user->email), FILTER_SANITIZE_EMAIL),
+                'phone' => preg_replace('/[^0-9+]/', '', $request->phone),
             ],
             'item_details' => [
                 [
