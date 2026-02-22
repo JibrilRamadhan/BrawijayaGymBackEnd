@@ -174,10 +174,11 @@ class PaymentController extends Controller
                 ['user_id' => $user->id],
                 [
                     'uuid' => (string) Str::uuid(),
-                    'first_name' => $metadata['first_name'] ?? $name,
-                    'last_name' => $metadata['last_name'] ?? null,
-                    'middle_name' => $metadata['middle_name'] ?? null,
+                    'first_name' => $name, // since we only use $name now
+                    'last_name' => null,
+                    'middle_name' => null,
                     'jenis_klamin' => $metadata['jenis_kelamin'] ?? 'L',
+                    'alamat' => $metadata['alamat'] ?? '-',
                 ]
             );
         } else {

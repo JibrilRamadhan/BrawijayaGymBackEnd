@@ -58,10 +58,8 @@ class SubscriptionController extends Controller
 
         // Extra validation for member-type plans
         if ($plan && Str::lower($plan->type) === 'member') {
-            $rules['first_name'] = 'required|string|max:100';
-            $rules['last_name'] = 'nullable|string|max:100';
-            $rules['middle_name'] = 'nullable|string|max:100';
             $rules['jenis_kelamin'] = 'required|in:L,P';
+            $rules['alamat'] = 'required|string|max:500';
         }
 
         $request->validate($rules);
@@ -151,10 +149,8 @@ class SubscriptionController extends Controller
         ];
 
         if (Str::lower($plan->type) === 'member') {
-            $metadata['first_name'] = $request->first_name;
-            $metadata['last_name'] = $request->last_name;
-            $metadata['middle_name'] = $request->middle_name;
             $metadata['jenis_kelamin'] = $request->jenis_kelamin;
+            $metadata['alamat'] = $request->alamat;
         }
 
         if (Str::lower($plan->type) === 'harian' && $request->has('days')) {
@@ -188,7 +184,7 @@ class SubscriptionController extends Controller
                 'gross_amount' => (int) $totalPrice,
             ],
             'customer_details' => [
-                'first_name' => $request->first_name ?? $request->name,
+                'first_name' => $request->name,
                 'email' => $user->email,
                 'phone' => $request->phone,
             ],
