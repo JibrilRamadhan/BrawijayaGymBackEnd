@@ -88,7 +88,7 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::with('roles:id,name')->where('email', $request->email)->first();
 
         if (!$user || !$user->password || !Hash::check($request->password, $user->password)) {
             return response()->json([
@@ -106,6 +106,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_guest' => $user->is_guest,
+                'roles' => $user->roles
             ]
         ]);
     }
@@ -117,8 +118,9 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Always refresh is_guest from DB to get the latest value
+        // Always refresh is_guest and load roles from DB to get the latest value
         $user->refresh();
+        $user->load('roles:id,name');
 
         // Get active subscription with plan details
         $activeSubscription = $user->subscriptions()
@@ -134,6 +136,7 @@ class AuthController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'is_guest' => $user->is_guest,
+            'roles' => $user->roles,
         ];
 
         if ($activeSubscription) {
