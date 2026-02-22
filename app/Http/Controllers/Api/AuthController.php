@@ -96,6 +96,12 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (!$user->is_active) {
+            return response()->json([
+                'message' => 'Akun Anda telah dinonaktifkan oleh Administrator.'
+            ], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -106,6 +112,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_guest' => $user->is_guest,
+                'is_active' => $user->is_active,
                 'roles' => $user->roles
             ]
         ]);
@@ -136,6 +143,7 @@ class AuthController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'is_guest' => $user->is_guest,
+            'is_active' => $user->is_active,
             'roles' => $user->roles,
         ];
 

@@ -23,5 +23,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stats', [AdminController::class, 'getStats']);
         Route::get('/users', [AdminController::class, 'getUsers']);
         Route::get('/payments', [AdminController::class, 'getPayments']);
+        Route::patch('/users/{id}/toggle-status', [AdminController::class, 'toggleUserStatus']);
     });
 });

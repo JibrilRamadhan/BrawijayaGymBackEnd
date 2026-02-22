@@ -20,10 +20,31 @@ class AdminController extends Controller
             ->take(5)
             ->get();
 
+        // Generate chart data for the last 7 days
+        $chartData = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::today()->subDays($i);
+
+            $dailyRevenue = Payment::where('status', 'settlement')
+                ->whereDate('created_at', $date)
+                ->sum('amount');
+
+            $dailyUsers = User::where('is_guest', false)
+                ->whereDate('created_at', $date)
+                ->count();
+
+            $chartData[] = [
+                'date' => $date->format('M d'),
+                'revenue' => $dailyRevenue,
+                'new_users' => $dailyUsers
+            ];
+        }
+
         return response()->json([
             'total_users' => $totalUsers,
             'total_revenue' => $totalRevenue,
             'recent_payments' => $recentPayments,
+            'chart_data' => $chartData
         ]);
     }
 
@@ -44,5 +65,28 @@ class AdminController extends Controller
             ->get();
 
         return response()->json($payments);
+    }
+
+    public function toggleUserStatus($id)
+    {
+        $user = User::findOrFail($id);
+
+        // Don't allow admins to deactivate themselves
+        if (auth()->id() == $user->id) {
+            return response()->json(['message' => 'You cannot deactivate your own account.'], 403);
+        }
+
+        $user->is_active = !$user->is_active;
+        $user->save();
+
+        if (!$user->is_active) {
+            // Revoke all tokens to immediately kick the user out of the app
+            $user->tokens()->delete();
+        }
+
+        return response()->json([
+            'message' => 'User status updated successfully.',
+            'user' => $user
+        ]);
     }
 }
