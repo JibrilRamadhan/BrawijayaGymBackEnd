@@ -117,7 +117,7 @@ class PaymentController extends Controller
             'amount' => $payment->amount,
             'plan_name' => $payment->plan->name ?? null,
             'plan_type' => $payment->plan->type ?? null,
-            'user' => $payment->user->username ?? null,
+            'user' => $payment->user->name ?? null,
             'email' => $payment->user->email ?? null,
             'paid_at' => $payment->paid_at,
             'status' => $payment->status,
@@ -162,7 +162,7 @@ class PaymentController extends Controller
         $payment->update(['subscription_id' => $subscription->id]);
 
         // Use metadata for profile data (populated during join)
-        $name = $metadata['name'] ?? $user->username;
+        $name = $metadata['name'] ?? $user->name;
         $phone = $metadata['phone'] ?? '000';
 
         if (Str::lower($plan->type) === 'member') {

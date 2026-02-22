@@ -22,6 +22,8 @@ class User extends Authenticatable
     protected $fillable = [
         'uuid',
         'email',
+        'name',
+        'phone',
         'username',
         'password',
         'is_guest',
@@ -56,7 +58,6 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
         ];
     }
 

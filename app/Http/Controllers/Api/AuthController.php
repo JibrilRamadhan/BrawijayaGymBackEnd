@@ -4,61 +4,93 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Mail\GeneratedPasswordMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
     /**
      * Register a new user.
+     *
+     * - Trial & Harian: no password, no username (is_guest = true)
+     * - Member: auto-generate password, send via email (is_guest = false)
      */
     public function register(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|unique:users,username',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'plan_type' => 'required|in:trial,harian,member',
         ]);
+
+        $isMember = $request->plan_type === 'member';
+        $password = null;
+
+        if ($isMember) {
+            $password = Str::random(10);
+        }
 
         $user = User::create([
             'uuid' => (string) Str::uuid(),
             'email' => $request->email,
-            'username' => $request->username,
-            'password' => Hash::make($request->password),
-            'is_guest' => true,
+            'name' => $request->name,
+            'phone' => $request->phone,
+            'username' => null,
+            'password' => $password ? Hash::make($password) : null,
+            'is_guest' => !$isMember,
         ]);
+
+        // Send generated password via email for member plans
+        if ($isMember && $password) {
+            try {
+                Mail::to($user->email)->send(new GeneratedPasswordMail($user->name, $password));
+            } catch (\Exception $e) {
+                // Log error but don't fail registration
+                \Log::error('Failed to send password email: ' . $e->getMessage());
+            }
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
+        $responseData = [
             'message' => 'User registered successfully.',
             'data' => [
                 'uuid' => $user->uuid,
-                'username' => $user->username,
+                'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'is_guest' => $user->is_guest,
             ],
             'access_token' => $token,
             'token_type' => 'Bearer',
-        ], 201);
+        ];
+
+        if ($isMember) {
+            $responseData['data']['password_sent'] = true;
+            $responseData['message'] = 'User registered successfully. Password has been sent to your email.';
+        }
+
+        return response()->json($responseData, 201);
     }
 
     /**
      * Login user and create token.
+     * Only users with a password (member) can login.
      */
     public function login(Request $request)
     {
         $request->validate([
-            'login' => 'required|string', // can be email or username
+            'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->login)
-            ->orWhere('username', $request->login)
-            ->first();
+        $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user || !$user->password || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'message' => 'Invalid login credentials'
             ], 401);
@@ -71,8 +103,9 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => [
                 'uuid' => $user->uuid,
-                'username' => $user->username,
+                'name' => $user->name,
                 'email' => $user->email,
+                'is_guest' => $user->is_guest,
             ]
         ]);
     }
@@ -97,8 +130,9 @@ class AuthController extends Controller
 
         $data = [
             'uuid' => $user->uuid,
-            'username' => $user->username,
+            'name' => $user->name,
             'email' => $user->email,
+            'phone' => $user->phone,
             'is_guest' => $user->is_guest,
         ];
 
